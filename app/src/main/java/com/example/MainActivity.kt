@@ -17,6 +17,12 @@ import com.example.presentation.add_edit_customer.AddEditCustomerScreen
 import com.example.presentation.customer_detail.CustomerDetailScreen
 import com.example.presentation.customer_list.CustomerListScreen
 import com.example.presentation.navigation.Screen
+import com.example.presentation.onboarding.OnboardingScreen
+import com.example.presentation.onboarding.OnboardingViewModel
+import com.example.presentation.onboarding.OnboardingViewModelFactory
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -25,6 +31,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
+                val onboardingViewModel: OnboardingViewModel = viewModel(
+                    factory = OnboardingViewModelFactory(applicationContext)
+                )
+                val isOnboardingCompleted by onboardingViewModel.isOnboardingCompleted.collectAsState()
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -32,8 +43,18 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     NavHost(
                         navController = navController,
-                        startDestination = Screen.CustomerList.route
+                        startDestination = if (isOnboardingCompleted) Screen.CustomerList.route else Screen.Onboarding.route
                     ) {
+                        composable(route = Screen.Onboarding.route) {
+                            OnboardingScreen(
+                                onFinish = {
+                                    onboardingViewModel.completeOnboarding()
+                                    navController.navigate(Screen.CustomerList.route) {
+                                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
                         composable(route = Screen.CustomerList.route) {
                             CustomerListScreen(
                                 onNavigateToAddCustomer = {

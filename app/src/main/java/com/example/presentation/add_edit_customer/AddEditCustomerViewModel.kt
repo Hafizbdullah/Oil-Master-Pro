@@ -53,12 +53,11 @@ class AddEditCustomerViewModel(
     private fun saveCustomer(onSuccess: (Long) -> Unit) {
         val state = _uiState.value
         if (state.name.isBlank() || state.phone.isBlank() || state.nextReminderDate == null) {
-            // Show error
             return
         }
 
         val customer = Customer(
-            id = if (state.id != null) state.id else 0,
+            id = state.id ?: 0L,
             name = state.name,
             phone = state.phone,
             oilImageUri = state.oilImageUri,
@@ -68,13 +67,8 @@ class AddEditCustomerViewModel(
         )
 
         viewModelScope.launch {
-            val id = if (customer.id == 0L) {
-                customerRepository.insertCustomer(customer)
-            } else {
-                customerRepository.updateCustomer(customer)
-                customer.id
-            }
-            onSuccess(id)
+            val savedId = customerRepository.insertCustomer(customer)
+            onSuccess(savedId)
         }
     }
 }

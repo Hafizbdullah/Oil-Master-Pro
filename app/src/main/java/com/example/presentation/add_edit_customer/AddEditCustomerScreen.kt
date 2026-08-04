@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +20,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -46,6 +49,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import com.example.OilChangeApp
 import com.example.R
 import com.example.worker.WorkScheduler
@@ -144,28 +152,82 @@ fun AddEditCustomerScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Phone
-            OutlinedTextField(
-                value = uiState.phone,
-                onValueChange = { viewModel.onEvent(AddEditCustomerEvent.PhoneChanged(it)) },
-                label = { Text("رقم الهاتف") },
-                modifier = Modifier.fillMaxWidth()
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = uiState.phone,
+                    onValueChange = { viewModel.onEvent(AddEditCustomerEvent.PhoneChanged(it)) },
+                    label = { Text("رقم الهاتف") },
+                    modifier = Modifier.weight(1f)
+                )
+                
+                val contactPickerLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.StartActivityForResult()
+                ) { result ->
+                    if (result.resultCode == android.app.Activity.RESULT_OK) {
+                        result.data?.data?.let { uri ->
+                            val details = ContactPickerUtils.getContactDetails(context, uri)
+                            details?.let { (name, phone) ->
+                                val cleanPhone = phone.replace(Regex("[^0-9+]"), "")
+                                if (uiState.name.isBlank()) {
+                                    viewModel.onEvent(AddEditCustomerEvent.NameChanged(name))
+                                }
+                                viewModel.onEvent(AddEditCustomerEvent.PhoneChanged(cleanPhone))
+                            }
+                        }
+                    }
+                }
+
+                IconButton(
+                    onClick = {
+                        val intent = android.content.Intent(
+                            android.content.Intent.ACTION_PICK,
+                            android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+                        )
+                        contactPickerLauncher.launch(intent)
+                    },
+                    modifier = Modifier.padding(start = 8.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.Person,
+                        contentDescription = "Pick Contact"
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Date selection dummy for simplicity, using a simple text field placeholder or a real date picker if we add one.
-            // A simple implementation without full material3 DatePicker due to constraints.
-            OutlinedTextField(
-                value = uiState.nextReminderDate?.toString() ?: "", // Convert timestamp to readable in real app
-                onValueChange = { /* Handle date parsing */ 
-                    val millis = System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000 // 30 days later as dummy
-                    viewModel.onEvent(AddEditCustomerEvent.DateChanged(millis))
-                },
-                label = { Text("موعد التذكير (اضغط لتحديد 30 يوم من الان كتجربة)") },
-                modifier = Modifier.fillMaxWidth(),
-                readOnly = true,
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-            )
+                val interactionSource = remember { MutableInteractionSource() }
+                val isPressed by interactionSource.collectIsPressedAsState()
+                if (isPressed) {
+                    showDatePicker = true
+                }
+
+                val formattedDate = uiState.nextReminderDate?.let { 
+                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it))
+                } ?: ""
+
+                OutlinedTextField(
+                    value = formattedDate,
+                    onValueChange = { },
+                    label = { Text("موعد التذكير") },
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = true,
+                    interactionSource = interactionSource
+                )
+
+                if (showDatePicker) {
+                    DatePickerDialogWrapper(
+                        onDismissRequest = { showDatePicker = false },
+                        onDateSelected = { millis ->
+                            if (millis != null) {
+                                viewModel.onEvent(AddEditCustomerEvent.DateChanged(millis))
+                            }
+                        }
+                    )
+                }
 
             Spacer(modifier = Modifier.height(16.dp))
 
