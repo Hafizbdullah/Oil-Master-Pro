@@ -1,0 +1,6 @@
+{
+  "name": "مذكر تغيير الزيت",
+  "description": "تطبيق احترافي لإدارة وتذكير عملاء ورش تغيير الزيوت",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
