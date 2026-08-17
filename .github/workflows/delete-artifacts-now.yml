@@ -1,0 +1,13 @@
+name: Force Delete All Artifacts
+
+on:
+  workflow_dispatch: # يتيح لك تشغيله بزر يدوي فوراً
+
+jobs:
+  delete-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete all artifacts immediately
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: '*' # علامة النجمة تحذف كل المخرجات والملفات بدون استثناء
